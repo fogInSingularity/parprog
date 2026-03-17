@@ -1,0 +1,2 @@
+leak:libfabric.so
+leak:libmpi.so
