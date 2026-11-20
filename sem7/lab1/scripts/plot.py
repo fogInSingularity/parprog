@@ -9,8 +9,8 @@ from pathlib import Path
 import statistics
 
 
-PARALLEL = {"parallel", "combined"}
-ALGORITHMS = {"naive", "transposed", "blocked", "strassen", "parallel", "simd", "combined"}
+PARALLEL = {"parallel", "combined", "combined-no-strassen"}
+ALGORITHMS = {"naive", "transposed", "blocked", "strassen", "simd"} | PARALLEL
 
 
 @dataclass(frozen=True, order=True)
@@ -23,6 +23,18 @@ class Key:
     seed: int
     values: str = "signed"  # Older CSV files used [-1,1] and had no range column.
 
+    @classmethod
+    def from_row(cls, row):
+        return cls(
+            algorithm=row["algorithm"],
+            n=int(row["n"]),
+            threads=int(row["threads"]),
+            block=int(row["block"]),
+            cutoff=int(row["cutoff"]),
+            seed=int(row["seed"]),
+            values=row.get("values", "signed"),
+        )
+
     def serial(self):
         return Key(self.algorithm, self.n, 1, self.block, self.cutoff, self.seed, self.values)
 
@@ -32,8 +44,7 @@ def summarize(path):
     repeats = {}
     with Path(path).open(newline="", encoding="utf-8") as source:
         for row in csv.DictReader(source):
-            key = Key(row["algorithm"], *(int(row[field]) for field in
-                      ("n", "threads", "block", "cutoff", "seed")), values=row.get("values", "signed"))
+            key = Key.from_row(row)
             if key.values not in {"positive", "signed"}:
                 raise ValueError(f"Unknown input range: {key.values}")
             seconds = float(row["seconds"])
@@ -60,10 +71,13 @@ def summarize(path):
         if repeats[key] != set(range(len(times))):
             raise ValueError(f"Missing repetition: {key}")
         results[key] = {
-            "samples": len(times), "mean_seconds": statistics.mean(times),
+            "samples": len(times),
+            "mean_seconds": statistics.mean(times),
             "stdev_seconds": statistics.stdev(times) if len(times) > 1 else 0.0,
-            "min_seconds": min(times), "max_seconds": max(times),
-            "speedup": None, "efficiency": None,
+            "min_seconds": min(times),
+            "max_seconds": max(times),
+            "speedup": None,
+            "efficiency": None,
         }
     for key, result in results.items():
         if key.algorithm in PARALLEL:
@@ -86,6 +100,7 @@ def write_summary(results, destination):
 def render(results, destination, title):
     # Import only for rendering: CSV analysis/tests need no third-party packages.
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -98,8 +113,10 @@ def render(results, destination, title):
 
     configs = {(key.block, key.cutoff, key.seed, key.values) for key in results}
     palette = plt.get_cmap("tab20").colors
-    colors = {identity: palette[index % len(palette)]
-              for index, identity in enumerate(sorted(series))}
+    colors = {
+        identity: palette[index % len(palette)]
+        for index, identity in enumerate(sorted(series))
+    }
     fig, axis = plt.subplots(figsize=(12, 7.5), layout="constrained")
     for (algorithm, threads, block, cutoff, seed, values), points in sorted(series.items()):
         points = sorted(points)
@@ -109,8 +126,15 @@ def render(results, destination, title):
         x = [n for n, _ in points]
         y = [result["mean_seconds"] for _, result in points]
         color = colors[(algorithm, threads, block, cutoff, seed, values)]
-        axis.errorbar(x, y, yerr=[result["stdev_seconds"] for _, result in points],
-                      marker="o", capsize=3, color=color, label=description)
+        axis.errorbar(
+            x,
+            y,
+            yerr=[result["stdev_seconds"] for _, result in points],
+            marker="o",
+            capsize=3,
+            color=color,
+            label=description,
+        )
     axis.set_xscale("log", base=2)
     axis.set_yscale("log")
     sizes = sorted({key.n for key in results})
@@ -131,7 +155,9 @@ def thread_counts(text):
         if not values or min(values) <= 0:
             raise ValueError
     except ValueError as error:
-        raise argparse.ArgumentTypeError("Thread counts must be positive integers separated by commas") from error
+        raise argparse.ArgumentTypeError(
+            "Thread counts must be positive integers separated by commas"
+        ) from error
     return values
 
 
@@ -140,12 +166,19 @@ def main():
     parser.add_argument("csv", type=Path)
     parser.add_argument("--output", type=Path, default=Path("plots"))
     parser.add_argument("--title", default="Matrix multiplication, float32")
-    parser.add_argument("--threads", type=thread_counts, default={1, 2, 8, 32},
-                        help="parallel configurations to show (default: 1,2,8,32)")
+    parser.add_argument(
+        "--threads",
+        type=thread_counts,
+        default={1, 2, 8, 32},
+        help="parallel configurations to show (default: 1,2,8,32)",
+    )
     arguments = parser.parse_args()
     results = summarize(arguments.csv)
-    results = {key: result for key, result in results.items()
-               if key.algorithm not in PARALLEL or key.threads in arguments.threads}
+    results = {
+        key: result
+        for key, result in results.items()
+        if key.algorithm not in PARALLEL or key.threads in arguments.threads
+    }
     if not results:
         parser.error("No measurements match the selected thread counts")
     arguments.output.mkdir(parents=True, exist_ok=True)

@@ -11,21 +11,24 @@
 
 namespace matmul {
 
-template <class T>
-struct View {
+template <class T> struct View {
     T* data;
     std::size_t n;
     std::size_t stride;
 
     View(T* ptr, std::size_t size, std::size_t pitch) : data(ptr), n(size), stride(pitch) {}
-    template <class U> requires std::is_convertible_v<U*, T*>
+
+    template <class U>
+        requires std::is_convertible_v<U*, T*>
     View(View<U> other) : data(other.data), n(other.n), stride(other.stride) {}
 
     T& operator()(std::size_t i, std::size_t j) const { return data[i * stride + j]; }
+
     View sub(std::size_t row, std::size_t col, std::size_t size) const {
         return {data + row * stride + col, size, stride};
     }
 };
+
 using ConstView = View<const float>;
 using MutableView = View<float>;
 
@@ -41,10 +44,15 @@ public:
     Matrix& operator=(const Matrix&) = delete;
 
     std::size_t size() const { return n_; }
+
     MutableView view() { return {data_.get(), n_, n_}; }
+
     ConstView view() const { return {data_.get(), n_, n_}; }
+
     float& operator()(std::size_t i, std::size_t j) { return view()(i, j); }
+
     float operator()(std::size_t i, std::size_t j) const { return view()(i, j); }
+
     void fill(float value);
     void randomize(std::uint32_t seed, InputRange range = InputRange::positive);
 
@@ -69,11 +77,14 @@ struct Error {
     double absolute = 0;
     double allowed = 0;
 };
+
 // Absolute tolerance handles cancellation near zero; relative tolerance handles scale.
-Error compare(const Matrix& actual, const std::vector<double>& expected,
-              double absolute_tolerance = 2e-4, double relative_tolerance = 2e-4);
+Error compare(const Matrix& actual,
+              const std::vector<double>& expected,
+              double absolute_tolerance = 2e-4,
+              double relative_tolerance = 2e-4);
 double checksum(const Matrix& matrix);
 
-}  // namespace matmul
+} // namespace matmul
 
-#endif  // MATRIX_HPP
+#endif // MATRIX_HPP

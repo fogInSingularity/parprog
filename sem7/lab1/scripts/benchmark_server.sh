@@ -9,7 +9,9 @@ mkdir -p "$matrix_results"
 {
     date -u
     uname -a
-    if command -v lscpu >/dev/null 2>&1; then lscpu; fi
+    if command -v lscpu >/dev/null 2>&1; then
+        lscpu
+    fi
     "$matrix_binary" info
 } > "$matrix_results/environment.txt"
 
@@ -19,6 +21,10 @@ if [[ -f "$matrix_build_dir/compile_commands.json" ]]; then
 fi
 
 "$matrix_binary" admission --size 512 > "$matrix_results/admission.txt"
+
+matrix_csv=$(mktemp "$matrix_results/.raw.XXXXXX")
+trap 'rm -f -- "$matrix_csv" "$matrix_csv.meta.txt"' EXIT
+
 matrix_benchmark_status=0
 "$matrix_binary" bench \
     --sizes "${MATRIX_SIZES:-32,64,128,256,512,1024,2048}" \
@@ -26,7 +32,16 @@ matrix_benchmark_status=0
     --values "${MATRIX_VALUES:-positive}" \
     --block "${MATRIX_BLOCK:-32}" --cutoff "${MATRIX_CUTOFF:-64}" \
     --repeats "${MATRIX_REPEATS:-5}" --warmups "${MATRIX_WARMUPS:-1}" \
-    --output "$matrix_results/raw.csv" | tee "$matrix_results/run.txt" || matrix_benchmark_status=$?
+    --output "$matrix_csv" | tee "$matrix_results/run.txt" || matrix_benchmark_status=$?
+
+if [[ ! -f "$matrix_csv.meta.txt" ]] || (( $(wc -l < "$matrix_csv") < 2 )); then
+    printf 'The benchmark produced no validated measurements.\n' >&2
+    exit 1
+fi
+
+mv -- "$matrix_csv" "$matrix_results/raw.csv"
+mv -- "$matrix_csv.meta.txt" "$matrix_results/raw.csv.meta.txt"
+printf 'Measurements saved to %s\n' "$matrix_results/raw.csv"
 
 python3 "$(dirname "$0")/plot.py" "$matrix_results/raw.csv" \
     --output "$matrix_results/plots" --title "Server: matrix multiplication, float32"

@@ -19,7 +19,9 @@ public:
     explicit ThreadPool(std::size_t threads);
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool& operator=(const ThreadPool&) = delete;
+
     std::size_t size() const { return workers_.size() + 1; }
+
     void parallel_for(std::size_t count, const std::function<void(std::size_t)>& task);
 
 private:
@@ -33,6 +35,6 @@ private:
     std::vector<std::jthread> workers_;
 };
 
-}  // namespace matmul
+} // namespace matmul
 
-#endif  // THREAD_POOL_HPP
+#endif // THREAD_POOL_HPP

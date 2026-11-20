@@ -5,7 +5,8 @@ import sys
 import tempfile
 import unittest
 
-SPEC = importlib.util.spec_from_file_location("matrix_plot", Path(__file__).parents[1] / "scripts/plot.py")
+SCRIPT = Path(__file__).parents[1] / "scripts" / "plot.py"
+SPEC = importlib.util.spec_from_file_location("matrix_plot", SCRIPT)
 PLOT = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = PLOT
 SPEC.loader.exec_module(PLOT)
@@ -13,8 +14,10 @@ SPEC.loader.exec_module(PLOT)
 
 class AnalysisTests(unittest.TestCase):
     def analyze(self, rows, with_values=False):
-        fields = ["algorithm", "n", "threads", "block", "cutoff", "seed", "repeat",
-                  "seconds", "max_scaled_error"]
+        fields = [
+            "algorithm", "n", "threads", "block", "cutoff", "seed", "repeat",
+            "seconds", "max_scaled_error",
+        ]
         if with_values:
             fields.append("values")
         with tempfile.TemporaryDirectory() as directory:

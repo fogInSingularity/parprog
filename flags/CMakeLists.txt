@@ -1,20 +1,37 @@
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # to generate compile_commands.json
+set(CMAKE_CXX_EXTENSIONS OFF PARENT_SCOPE)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON PARENT_SCOPE)
+
+add_library(par-common-flags INTERFACE)
+
+target_compile_features(par-common-flags
+    INTERFACE
+        cxx_std_20
+)
+
+target_compile_options(par-common-flags
+    INTERFACE
+        -Wall
+        -Wextra
+        -Wpedantic
+)
 
 add_library(par-flags INTERFACE)
 
+target_link_libraries(par-flags
+    INTERFACE
+        par-common-flags
+)
+
 target_compile_features(par-flags
     INTERFACE
-        cxx_std_20
         c_std_11
 )
 
 target_compile_options(par-flags
     INTERFACE
         -fdiagnostics-color=always
- 
-        -Wall
-        -Wextra
-        -Wpedantic
+
         # -Wshadow
         # -Wconversion
         # -Wsign-conversion
@@ -23,7 +40,7 @@ target_compile_options(par-flags
 
         -fstack-protector-strong # inserts checks for buffer overflow
         # -fPIE -pie
-        
+
         $<$<CONFIG:Debug>:
             -Og
             -g3
