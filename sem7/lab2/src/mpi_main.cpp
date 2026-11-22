@@ -87,7 +87,6 @@ double measure_kernel(const auto& compute) {
     MPI_Barrier(MPI_COMM_WORLD);
     const double start = MPI_Wtime();
     compute();
-    // Include the time until every rank completes its work.
     MPI_Barrier(MPI_COMM_WORLD);
     const double elapsed = MPI_Wtime() - start;
 
@@ -153,7 +152,6 @@ int execute(const Options& options, int rank, int processes) {
                 }
                 validation = compare(result, expected.output());
             }
-            // All ranks must skip a failed configuration together.
             MPI_Bcast(&validation.mismatches, 1, MPI_UINT64_T, root_rank, MPI_COMM_WORLD);
             return Sample{elapsed, result, validation};
         };
@@ -169,8 +167,8 @@ int execute(const Options& options, int rank, int processes) {
     return failed == 0 ? 0 : 1;
 }
 
-} // namespace
-} // namespace loops
+}
+}
 
 int main(int argc, char** argv) {
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {

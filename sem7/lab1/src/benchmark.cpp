@@ -150,7 +150,6 @@ bool run_configuration(const Options& options,
     }
 
     double total = 0;
-    // Save the group only if every repeat matches the reference.
     std::ostringstream measurements;
     measurements << std::setprecision(12);
     for (std::size_t repeat = 0; repeat < options.repeats; ++repeat) {
@@ -201,7 +200,7 @@ std::ofstream open_results(const Options& options, bool timed) {
     return csv;
 }
 
-} // namespace
+}
 
 bool benchmark(const Options& options, bool timed) {
     auto csv = open_results(options, timed);
@@ -236,4 +235,4 @@ bool benchmark(const Options& options, bool timed) {
     return failures.empty();
 }
 
-} // namespace matmul
+}

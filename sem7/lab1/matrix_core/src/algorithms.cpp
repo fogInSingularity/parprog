@@ -37,7 +37,6 @@ void transposed(ConstView a, ConstView b, MutableView c) {
     }
 }
 
-// Each task owns an entire output tile for all k, so no output reductions/locks.
 void blocked_tile(ConstView a,
                   ConstView b,
                   MutableView c,
@@ -123,31 +122,31 @@ void strassen_factors(std::size_t index,
     const auto& [b11, b12, b21, b22] = b;
 
     switch (index) {
-    case 0: // M1 = (A11+A22)(B11+B22)
+    case 0:
         linear_combination(a11, a22, left, 1);
         linear_combination(b11, b22, right, 1);
         break;
-    case 1: // M2 = (A21+A22)B11
+    case 1:
         linear_combination(a21, a22, left, 1);
         copy(b11, right);
         break;
-    case 2: // M3 = A11(B12-B22)
+    case 2:
         copy(a11, left);
         linear_combination(b12, b22, right, -1);
         break;
-    case 3: // M4 = A22(B21-B11)
+    case 3:
         copy(a22, left);
         linear_combination(b21, b11, right, -1);
         break;
-    case 4: // M5 = (A11+A12)B22
+    case 4:
         linear_combination(a11, a12, left, 1);
         copy(b22, right);
         break;
-    case 5: // M6 = (A21-A11)(B11+B12)
+    case 5:
         linear_combination(a21, a11, left, -1);
         linear_combination(b11, b12, right, 1);
         break;
-    case 6: // M7 = (A12-A22)(B21+B22)
+    case 6:
         linear_combination(a12, a22, left, -1);
         linear_combination(b21, b22, right, 1);
         break;
@@ -170,7 +169,6 @@ void strassen_product(std::size_t index,
     Matrix left(result.n);
     Matrix right(result.n);
     strassen_factors(index, a, b, left.view(), right.view());
-    // Only the top level uses the pool. Workers never wait for other pool jobs.
     strassen_recursive(left.view(), right.view(), result, config, vectorized, nullptr);
 }
 
@@ -242,7 +240,6 @@ void strassen(ConstView a,
               const Config& config,
               bool vectorized,
               ThreadPool* pool) {
-    // No padding for leaf calls. Larger non-power-of-two matrices are zero padded.
     if (a.n <= config.cutoff) {
         tiled_product(a, b, c, config.block, vectorized, pool);
         return;
@@ -270,7 +267,7 @@ void strassen(ConstView a,
     strassen_recursive(ap.view(), bp.view(), cp.view(), config, vectorized, pool);
     copy(cp.view().sub(0, 0, a.n), c);
 }
-} // namespace
+}
 
 std::string_view name(Algorithm algorithm) {
     switch (algorithm) {
@@ -323,7 +320,6 @@ void multiply(Algorithm algorithm,
     if (config.block == 0 || config.cutoff == 0) {
         throw std::invalid_argument("Block size and Strassen cutoff must be positive");
     }
-    // Clamp block to n to keep additions bounded even with huge user parameters.
     const Config bounded{std::min(config.block, a.size()), config.cutoff};
     switch (algorithm) {
     case Algorithm::naive:
@@ -342,7 +338,6 @@ void multiply(Algorithm algorithm,
         tiled_product(a.view(), b.view(), c.view(), bounded.block, false, &pool);
         break;
     case Algorithm::simd: {
-        // A full k range here isolates transpose+SIMD from cache blocking.
         Matrix bt(b.size());
         transpose(b.view(), bt.view());
         simd_tile(a.view(), bt.view(), c.view(), 0, a.size(), 0, a.size(), a.size());
@@ -358,4 +353,4 @@ void multiply(Algorithm algorithm,
         throw std::invalid_argument("Unknown algorithm");
     }
 }
-} // namespace matmul
+}

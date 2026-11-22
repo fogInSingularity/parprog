@@ -8,7 +8,6 @@
 #include <iosfwd>
 
 namespace loops {
-// Output refers to the buffer owned by the caller, valid until the next run.
 struct Sample {
     double seconds;
     std::span<const double> output;
@@ -23,6 +22,6 @@ bool run_configuration(const Options& options,
                        const std::function<Sample()>& run,
                        std::ostream* csv,
                        bool report = true);
-} // namespace loops
+}
 
-#endif // BENCHMARK_HPP
+#endif

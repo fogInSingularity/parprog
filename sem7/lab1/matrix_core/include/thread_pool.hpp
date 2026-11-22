@@ -12,8 +12,6 @@
 
 namespace matmul {
 
-// One caller plus p-1 persistent workers. parallel_for is synchronous and must
-// only be called by the owning caller, never recursively from a worker.
 class ThreadPool {
 public:
     explicit ThreadPool(std::size_t threads);
@@ -31,10 +29,9 @@ private:
     std::mutex mutex_;
     std::condition_variable_any ready_;
     std::queue<std::function<void()>> queue_;
-    // Destroy workers first, while synchronization objects still exist.
     std::vector<std::jthread> workers_;
 };
 
-} // namespace matmul
+}
 
-#endif // THREAD_POOL_HPP
+#endif

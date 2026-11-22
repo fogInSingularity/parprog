@@ -77,6 +77,6 @@ newton(NewtonState& state, const auto& exchange, const auto& linear_solve, const
     throw std::runtime_error("Newton did not converge");
 }
 
-} // namespace boundary
+}
 
-#endif // NUMEROV_HPP
+#endif

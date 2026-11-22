@@ -15,7 +15,7 @@ std::size_t elements(std::size_t n) {
     }
     return n * n;
 }
-} // namespace
+}
 
 Matrix::Matrix(std::size_t n) : n_(n), data_(hwy::AllocateAligned<float>(elements(n))) {
     if (!data_) {
@@ -43,7 +43,6 @@ void Matrix::randomize(std::uint32_t seed, InputRange range) {
         throw std::invalid_argument("Unknown input range");
     }
     std::mt19937 generator(seed);
-    // Exact binary fractions; identical data across standard library implementations.
     for (std::size_t i = 0; i < n_ * n_; ++i) {
         if (range == InputRange::positive) {
             data_[i] = 1.0f + static_cast<float>(generator() % 1025) / 1024.0f;
@@ -137,4 +136,4 @@ double checksum(const Matrix& matrix) {
     }
     return sum;
 }
-} // namespace matmul
+}

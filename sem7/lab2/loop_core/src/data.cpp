@@ -160,4 +160,4 @@ void write_matrix(const std::filesystem::path& path,
         throw std::runtime_error("Failed to write matrix file: " + path.string());
     }
 }
-} // namespace loops
+}

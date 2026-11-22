@@ -30,6 +30,6 @@ Options parse_options(int argc, char** argv, bool mpi);
 void help(std::ostream& out, bool mpi);
 std::filesystem::path
 matrix_path(const Options& options, Task task, std::string_view backend, std::size_t workers);
-} // namespace loops
+}
 
-#endif // OPTIONS_HPP
+#endif

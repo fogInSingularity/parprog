@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Measure the reference and tasks 1v, 2g, and 3d, retaining every CSV."""
 
 import argparse
 import csv
@@ -44,7 +43,9 @@ def merge_measurements(files, destination):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Measure the reference and tasks 1v, 2g, and 3d, retaining every CSV."
+    )
     build_dir = Path(__file__).resolve().parents[1] / "build"
     parser.add_argument("--bin-dir", type=Path, default=build_dir)
     parser.add_argument("--output", type=Path, default=Path("results"))
@@ -75,9 +76,7 @@ def main():
         commands.append(command)
         files.append(path)
         print("$ " + shlex.join(command), flush=True)
-        # A launcher can fail before the executable opens its CSV.
         path.unlink(missing_ok=True)
-        # A failed configuration must not prevent later MPI counts from running.
         status = subprocess.run(command, env=environment).returncode
         failed |= status != 0
 

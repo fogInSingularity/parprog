@@ -16,7 +16,7 @@ void pack(Row row, double* output) {
     output[3] = row.rhs;
 }
 
-} // namespace
+}
 
 DistributedReduction::DistributedReduction(std::size_t unknowns, int rank, int ranks)
     : rank_(rank), ranks_(ranks), counts_(ranks), offsets_(ranks) {
@@ -118,4 +118,4 @@ gather_solution(std::span<const double> local, std::size_t total, int rank, int 
     return collected;
 }
 
-} // namespace boundary
+}

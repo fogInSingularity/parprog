@@ -28,6 +28,6 @@ struct Options {
 Options parse_options(int argc, char** argv);
 void print_help();
 
-} // namespace matmul
+}
 
-#endif // OPTIONS_HPP
+#endif

@@ -31,7 +31,6 @@ template <class F> void must_throw(F operation, const std::string& message) {
 
 void test_products() {
     std::size_t checks = 0;
-    // Odd sizes, vector tails, block tails, padding, multiple Strassen levels.
     for (auto threads : {1U, 2U, 4U}) {
         ThreadPool pool(threads);
         for (auto n : {1U, 2U, 3U, 7U, 8U, 9U, 15U, 16U, 17U, 31U, 33U, 63U, 65U}) {
@@ -56,7 +55,6 @@ void test_products() {
                     }
                 }
                 if (pattern == 4) {
-                    // Cancellation, alternating signs, unequal magnitudes.
                     for (std::size_t i = 0; i < n; ++i) {
                         for (std::size_t j = 0; j < n; ++j) {
                             a(i, j) = ((i + j) % 2 == 0 ? 1.0f : -1.0f) * 0.125f;
@@ -183,7 +181,6 @@ void test_simd_targets() {
     const auto expected = reference_product(a, b);
     for (auto target : targets) {
         hwy::SetSupportedTargetsForTest(target);
-        // A 32-column tile fills two AVX-512 vectors, and 33 leaves a tail.
         for (auto algorithm :
              {Algorithm::simd, Algorithm::combined, Algorithm::combined_no_strassen}) {
             multiply(algorithm, a, b, c, {32, 16}, pool);
@@ -222,7 +219,7 @@ void test_input_ranges() {
         require(has_negative == (range == InputRange::signed_unit), "Signed input coverage lost");
     }
 }
-} // namespace
+}
 
 int main() {
     try {

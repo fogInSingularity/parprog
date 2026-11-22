@@ -28,7 +28,7 @@ void remove_right(Row& row, const Row& right) {
     row.rhs -= factor * right.rhs;
 }
 
-} // namespace
+}
 
 void thomas(std::span<Row> rows, std::span<double> solution) {
     if (rows.empty()) {
@@ -59,7 +59,6 @@ void CyclicReduction::reduce(std::span<Row> rows) {
                 eliminated_.push_back({i, active_[j - 1], active_[j + 1]});
                 continue;
             }
-            // Eliminated equations are preserved for the reverse sweep.
             if (j != 0 && (j - 1) % 2 != 0) {
                 remove_left(rows[i], rows[active_[j - 1]]);
             }
@@ -99,4 +98,4 @@ void CyclicReduction::solve(std::span<Row> rows, std::span<double> solution) {
     restore(rows, solution);
 }
 
-} // namespace boundary
+}

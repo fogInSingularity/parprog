@@ -40,7 +40,6 @@ def main():
         half = solve(launcher, flags, binary, 4, output, "--intervals", "1051")
         check_same(full, half)
 
-        # Blocks of one and two unknowns exercise both interface row counts.
         small = solve(launcher, flags, binary, 1, output, "--solver", "thomas", "--a", "0.001", "--intervals", "6")
         distributed = solve(launcher, flags, binary, 4, output, "--a", "0.001", "--intervals", "6")
         check_same(small, distributed)

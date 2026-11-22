@@ -47,6 +47,6 @@ void multiply(Algorithm algorithm,
               const Config& config,
               ThreadPool& pool);
 
-} // namespace matmul
+}
 
-#endif // ALGORITHMS_HPP
+#endif

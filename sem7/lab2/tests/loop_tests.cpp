@@ -113,7 +113,7 @@ void failure_is_reported() {
     const auto run = [&] {
         Validation result;
         if (++invokes == 3) {
-            result.mismatches = 1; // Fail after one successful measured repeat.
+            result.mismatches = 1;
         }
         return Sample{0.01, {}, result};
     };
@@ -125,7 +125,7 @@ void failure_is_reported() {
             "Later group did not run");
     require(!csv.str().empty(), "Valid measurements lost");
 }
-} // namespace
+}
 
 int main() {
     try {

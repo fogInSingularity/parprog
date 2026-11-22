@@ -66,8 +66,8 @@ std::size_t SimdLanes() {
     return hn::Lanes(hn::ScalableTag<float>());
 }
 
-} // namespace HWY_NAMESPACE
-} // namespace matmul
+}
+}
 
 HWY_AFTER_NAMESPACE();
 
@@ -95,5 +95,5 @@ const char* simd_target() {
 std::size_t simd_lanes() {
     return HWY_DYNAMIC_DISPATCH(SimdLanes)();
 }
-} // namespace matmul
+}
 #endif

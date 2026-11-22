@@ -15,7 +15,6 @@ namespace hn = hwy::HWY_NAMESPACE;
 
 namespace {
 
-// Reuse two B vectors across four rows of C and hold the sums in registers.
 template <class D>
 HWY_INLINE void microkernel_4x2(D d,
                                 ConstView a,
@@ -82,7 +81,6 @@ HWY_INLINE void microkernel_4x2(D d,
     hn::StoreU(sum31, d, c3 + lanes);
 }
 
-// A full or partial vector at the edge of the output tile.
 template <class D>
 HWY_INLINE void microkernel_row(D d,
                                 ConstView a,
@@ -107,7 +105,7 @@ HWY_INLINE void microkernel_row(D d,
     }
 }
 
-} // namespace
+}
 
 void SimdBlockTile(ConstView a, ConstView b, MutableView c, Tile tile, std::size_t block) {
     const hn::ScalableTag<float> d;
@@ -133,8 +131,8 @@ void SimdBlockTile(ConstView a, ConstView b, MutableView c, Tile tile, std::size
     }
 }
 
-} // namespace HWY_NAMESPACE
-} // namespace matmul
+}
+}
 
 HWY_AFTER_NAMESPACE();
 
@@ -146,5 +144,5 @@ void simd_block_tile(ConstView a, ConstView b, MutableView c, Tile tile, std::si
     HWY_DYNAMIC_DISPATCH(SimdBlockTile)(a, b, c, tile, block);
 }
 
-} // namespace matmul
+}
 #endif

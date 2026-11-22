@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Run manually on the server; this script is never part of CTest.
 set -euo pipefail
 
 matrix_binary=${1:-./build/matrix_lab}

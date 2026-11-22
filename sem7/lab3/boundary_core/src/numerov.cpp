@@ -20,7 +20,7 @@ double max_abs(double current, double value) noexcept {
                                 : std::numeric_limits<double>::infinity();
 }
 
-} // namespace
+}
 
 double Grid::step() const noexcept {
     return (full ? 20.0 : 10.0) / static_cast<double>(intervals);
@@ -51,7 +51,6 @@ NewtonState::NewtonState(Grid grid, Slice slice)
 }
 
 void NewtonState::reset() {
-    // Solution of the problem linearized around y=1, using decaying exponentials.
     const auto decay = std::sqrt(2.0 * grid_.a);
     const auto difference = (boundary_value() - 1.0) / (1.0 + std::exp(-20.0 * decay));
     for (std::size_t i = 0; i < slice_.count; ++i) {
@@ -113,4 +112,4 @@ std::span<double> NewtonState::correction() {
     return correction_;
 }
 
-} // namespace boundary
+}

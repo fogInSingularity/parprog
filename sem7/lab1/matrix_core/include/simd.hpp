@@ -4,7 +4,6 @@
 #include "matrix.hpp"
 
 namespace matmul {
-// B is already transposed. Only the specified output tile is written.
 void simd_tile(ConstView a,
                ConstView bt,
                MutableView c,
@@ -25,6 +24,6 @@ void simd_block_tile(ConstView a, ConstView b, MutableView c, Tile tile, std::si
 
 const char* simd_target();
 std::size_t simd_lanes();
-} // namespace matmul
+}
 
-#endif // SIMD_HPP
+#endif

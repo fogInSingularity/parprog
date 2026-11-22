@@ -27,7 +27,7 @@ void admission(std::size_t n) {
     std::cout << "PASS: naive, " << n << 'x' << n << ", A=B=1, every C[i,j]=" << n << '\n';
 }
 
-} // namespace
+}
 
 int main(int argc, char** argv) {
     try {

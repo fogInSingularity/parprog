@@ -96,7 +96,6 @@ void compute_rows(Data& data, Slice rows) noexcept {
             snapshot_row(data, row);
         }
     } else if (data.task == Task::variant3d) {
-        // MPI slices have up to three extra input rows for this forward shift.
         const auto input_rows = data.a.size() / cols;
         for (std::size_t row = rows.begin; row < end && row + 3 < input_rows; ++row) {
             const auto* source = data.a.data() + (row + 3) * cols;
@@ -121,7 +120,7 @@ void compute_worker(Data& data, std::size_t workers, std::size_t rank) {
     }
 }
 
-} // namespace
+}
 
 void fused(Data& data) noexcept {
     compute_worker(data, 1, 0);
@@ -153,4 +152,4 @@ void openmp(Data& data, std::size_t workers) {
     }
 }
 
-} // namespace loops
+}

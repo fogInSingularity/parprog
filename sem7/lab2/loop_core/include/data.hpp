@@ -31,14 +31,12 @@ struct Slice {
 
 Slice partition(std::size_t rows, std::size_t workers, std::size_t rank);
 
-// Zero local rows are valid: an MPI rank can own an empty slice.
 struct Data {
     Task task;
     std::size_t rows;
     std::size_t cols;
     std::size_t row_offset;
     std::vector<double> a;
-    // Input snapshot for 2g, output matrix for 3d.
     std::vector<double> b;
 
     Data(Task task,
@@ -68,6 +66,6 @@ void write_matrix(const std::filesystem::path& path,
                   std::size_t cols,
                   Task task);
 
-} // namespace loops
+}
 
-#endif // DATA_HPP
+#endif

@@ -21,7 +21,7 @@ void consume_tasks(std::atomic<std::size_t>& next,
     }
 }
 
-} // namespace
+}
 
 ThreadPool::ThreadPool(std::size_t threads) {
     if (threads == 0) {
@@ -45,7 +45,7 @@ void ThreadPool::worker(std::stop_token stop) {
             task = std::move(queue_.front());
             queue_.pop();
         }
-        task(); // packaged_task forwards exceptions to the owning caller.
+        task();
     }
 }
 
@@ -80,11 +80,10 @@ void ThreadPool::parallel_for(std::size_t count, const std::function<void(std::s
         for (std::size_t i = 1; i < participants; ++i) {
             futures.push_back(submit(work));
         }
-        work(); // The calling thread is one of the p participants.
+        work();
     } catch (...) {
         failure = std::current_exception();
     }
-    // Always join every submitted job before referenced stack variables expire.
     for (auto& future : futures) {
         try {
             future.get();
@@ -98,4 +97,4 @@ void ThreadPool::parallel_for(std::size_t count, const std::function<void(std::s
         std::rethrow_exception(failure);
     }
 }
-} // namespace matmul
+}

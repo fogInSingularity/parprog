@@ -201,8 +201,8 @@ void execute(const Options& options, int rank, int ranks) {
     }
 }
 
-} // namespace
-} // namespace boundary
+}
+}
 
 int main(int argc, char** argv) {
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {

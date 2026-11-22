@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Compare literal sequential output with fused, C++ thread, and MPI files."""
 
 import argparse
 from pathlib import Path
@@ -12,7 +11,9 @@ import mpi
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Compare literal sequential output with fused, C++ thread, and MPI files."
+    )
     parser.add_argument("--bin-dir", type=Path, required=True)
     parser.add_argument("--ranks", type=int)
     parser.add_argument("--rows", type=int, default=7)

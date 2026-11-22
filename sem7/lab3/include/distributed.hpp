@@ -29,6 +29,6 @@ private:
 std::vector<double>
 gather_solution(std::span<const double> local, std::size_t total, int rank, int ranks);
 
-} // namespace boundary
+}
 
-#endif // DISTRIBUTED_HPP
+#endif

@@ -41,7 +41,7 @@ void dump_output(const Options& options,
     }
 }
 
-} // namespace
+}
 
 std::ofstream open_csv(const Options& options, bool report) {
     std::ofstream output;
@@ -124,4 +124,4 @@ bool run_configuration(const Options& options,
     }
     return true;
 }
-} // namespace loops
+}

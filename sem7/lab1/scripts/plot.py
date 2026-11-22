@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Aggregate raw benchmark CSV and plot time versus size for every configuration."""
 
 import argparse
 import csv
@@ -21,7 +20,7 @@ class Key:
     block: int
     cutoff: int
     seed: int
-    values: str = "signed"  # Older CSV files used [-1,1] and had no range column.
+    values: str = "signed"
 
     @classmethod
     def from_row(cls, row):
@@ -98,7 +97,6 @@ def write_summary(results, destination):
 
 
 def render(results, destination, title):
-    # Import only for rendering: CSV analysis/tests need no third-party packages.
     import matplotlib
 
     matplotlib.use("Agg")
@@ -163,7 +161,9 @@ def thread_counts(text):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Aggregate raw benchmark CSV and plot time versus size for every configuration."
+    )
     parser.add_argument("csv", type=Path)
     parser.add_argument("--output", type=Path, default=Path("plots"))
     parser.add_argument("--title")

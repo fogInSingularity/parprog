@@ -46,7 +46,7 @@ std::vector<Task> default_tasks(bool mpi) {
     }
     return {all_tasks.begin(), all_tasks.end()};
 }
-} // namespace
+}
 
 std::string_view name(Backend backend) {
     switch (backend) {
@@ -147,4 +147,4 @@ matrix_path(const Options& options, Task task, std::string_view backend, std::si
                            std::to_string(options.cols) + '-' + std::string(backend) + "-p" +
                            std::to_string(workers) + ".txt");
 }
-} // namespace loops
+}

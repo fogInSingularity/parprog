@@ -1,5 +1,3 @@
-"""Resolve an MPI launcher and its environment without changing the login shell."""
-
 import argparse
 from functools import lru_cache
 import os
@@ -54,7 +52,9 @@ def command(launcher, workers, binary, arguments):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Resolve an MPI launcher and its environment without changing the login shell."
+    )
     parser.add_argument("-n", "--workers", type=int, default=2)
     parser.add_argument("--mpiexec")
     parser.add_argument("binary", type=Path)

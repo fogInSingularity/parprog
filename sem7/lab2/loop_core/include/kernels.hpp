@@ -4,7 +4,6 @@
 #include "data.hpp"
 
 namespace loops {
-// A chain in 1v advances by one row and three columns.
 struct Chain {
     std::size_t row;
     std::size_t col;
@@ -19,6 +18,6 @@ void sequential(Data& data);
 void fused(Data& data) noexcept;
 void threaded(Data& data, std::size_t workers);
 void openmp(Data& data, std::size_t workers);
-} // namespace loops
+}
 
-#endif // KERNELS_HPP
+#endif

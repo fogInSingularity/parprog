@@ -73,7 +73,7 @@ void check_accuracy() {
     require(ratio > 14 && ratio < 18, "Grid refinement does not exhibit fourth-order convergence");
 }
 
-} // namespace
+}
 
 int main() {
     try {

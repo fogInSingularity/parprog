@@ -16,7 +16,6 @@ struct Row {
 
 void thomas(std::span<Row> rows, std::span<double> solution);
 
-// Keep the endpoints so a reduced block can be joined to its neighbours.
 class CyclicReduction {
 public:
     void reduce(std::span<Row> rows);
@@ -35,6 +34,6 @@ private:
     std::vector<std::size_t> next_;
 };
 
-} // namespace boundary
+}
 
-#endif // TRIDIAGONAL_HPP
+#endif

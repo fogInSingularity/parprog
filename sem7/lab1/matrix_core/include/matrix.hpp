@@ -69,7 +69,6 @@ struct Error {
     std::size_t mismatches = 0;
     double max_absolute = 0;
     double max_scaled = 0;
-    // Element with the largest error relative to its allowed tolerance.
     std::size_t row = 0;
     std::size_t col = 0;
     double actual = 0;
@@ -84,6 +83,6 @@ Error compare(const Matrix& actual,
               double relative_tolerance = 2e-4);
 double checksum(const Matrix& matrix);
 
-} // namespace matmul
+}
 
-#endif // MATRIX_HPP
+#endif

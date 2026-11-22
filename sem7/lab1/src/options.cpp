@@ -44,7 +44,7 @@ std::vector<std::size_t> numbers(std::string_view text) {
     return {result.begin(), result.end()};
 }
 
-} // namespace
+}
 
 Options parse_options(int argc, char** argv) {
     Options options;
@@ -107,7 +107,6 @@ Options parse_options(int argc, char** argv) {
             throw std::invalid_argument("Unknown option: " + std::string(key));
         }
     }
-    // Every parallel series needs its own one-thread baseline for S_p and E_p.
     if (std::find(options.threads.begin(), options.threads.end(), 1) == options.threads.end()) {
         options.threads.insert(options.threads.begin(), 1);
     }
@@ -134,4 +133,4 @@ void print_help() {
         << "  --output FILE           optional CSV plus .meta.txt; default: terminal only\n";
 }
 
-} // namespace matmul
+}

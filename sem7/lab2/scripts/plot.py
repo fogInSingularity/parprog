@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Plot timings, speedup, and efficiency for the loop lab."""
 
 import argparse
 import csv
@@ -14,7 +13,7 @@ TASK_LABELS = {
     "1v": "Вариант 1в",
     "2g": "Вариант 2г",
     "3d": "Вариант 3д",
-    "3v": "Вариант 3в",  # Archived measurements
+    "3v": "Вариант 3в",
 }
 BACKEND_STYLES = {"threads": ("Потоки", "-"), "mpi": ("MPI", "--"), "openmp": ("OpenMP", "-.")}
 SEQUENTIAL_BACKENDS = {"seq", "fused"}
@@ -324,7 +323,7 @@ def render(results, directory, title):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Plot timings, speedup, and efficiency for the loop lab.")
     parser.add_argument("csv", type=Path)
     parser.add_argument("--output", type=Path, default=Path("plots"))
     parser.add_argument("--title")

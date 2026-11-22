@@ -81,8 +81,8 @@ int execute(const Options& options) {
     return failed == 0 ? 0 : 1;
 }
 
-} // namespace
-} // namespace loops
+}
+}
 
 int main(int argc, char** argv) {
     try {
