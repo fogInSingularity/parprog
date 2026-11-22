@@ -43,7 +43,7 @@ add_test(NAME output_files_mpi_2 COMMAND ${verify_files} --ranks 2 --rows 2 --co
 
 add_test(NAME output_files_mpi_4 COMMAND ${verify_files} --ranks 4 --rows 2 --cols 7)
 
-add_test(NAME output_files_mpi_uneven COMMAND ${verify_files} --ranks 4 --rows 7 --cols 3)
+add_test(NAME output_files_mpi_uneven COMMAND ${verify_files} --ranks 4 --rows 11 --cols 19)
 
 add_test(NAME output_files_mpi_boundary COMMAND ${verify_files} --ranks 2 --rows 1 --cols 1)
 

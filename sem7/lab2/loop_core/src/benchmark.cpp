@@ -37,7 +37,7 @@ void dump_output(const Options& options,
                  bool report) {
     if (report && !options.dump.empty()) {
         write_matrix(
-            matrix_path(options, task, backend, workers), output, options.rows, options.cols);
+            matrix_path(options, task, backend, workers), output, options.rows, options.cols, task);
     }
 }
 

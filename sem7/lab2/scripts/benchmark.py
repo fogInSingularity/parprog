@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the reference and task 3v with shared memory and MPI, retaining every CSV."""
+"""Measure the reference and tasks 1v, 2g, and 3d, retaining every CSV."""
 
 import argparse
 import csv

@@ -10,12 +10,12 @@
 #include <vector>
 
 namespace loops {
-enum class Backend { all, seq, fused, threads };
+enum class Backend { all, seq, fused, threads, openmp };
 std::string_view name(Backend backend);
 
 struct Options {
     std::string command = "help";
-    std::vector<Task> tasks{Task::reference, Task::variant3v};
+    std::vector<Task> tasks{all_tasks.begin(), all_tasks.end()};
     Backend backend = Backend::all;
     std::size_t rows = 1000;
     std::size_t cols = 1000;

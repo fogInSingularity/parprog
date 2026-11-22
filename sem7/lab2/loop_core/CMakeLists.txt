@@ -1,4 +1,5 @@
 find_package(Threads REQUIRED)
+find_package(OpenMP REQUIRED COMPONENTS CXX)
 
 add_library(loop_core)
 
@@ -19,4 +20,6 @@ target_link_libraries(loop_core
     PUBLIC
         par-common-flags
         Threads::Threads
+    PRIVATE
+        OpenMP::OpenMP_CXX
 )

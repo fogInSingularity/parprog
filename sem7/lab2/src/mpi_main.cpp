@@ -4,6 +4,7 @@
 
 #include <mpi.h>
 
+#include <algorithm>
 #include <exception>
 #include <iostream>
 #include <limits>
@@ -21,22 +22,71 @@ struct GatherLayout {
     std::vector<int> offsets;
 };
 
-GatherLayout gather_layout(const Options& options, int processes) {
+GatherLayout gather_layout(Task task, const Options& options, int processes) {
     GatherLayout layout;
     layout.counts.reserve(processes);
     layout.offsets.reserve(processes);
+    std::size_t offset = 0;
     for (int rank = 0; rank < processes; ++rank) {
-        const auto part = partition(options.rows, processes, rank);
-        layout.counts.push_back(static_cast<int>(part.count * options.cols));
-        layout.offsets.push_back(static_cast<int>(part.begin * options.cols));
+        std::size_t count = 0;
+        if (task == Task::variant1v) {
+            const auto chains = chain_count(options.rows, options.cols);
+            for (std::size_t index = rank; index < chains; index += processes) {
+                count += chain_at(index, options.rows, options.cols).count;
+            }
+        } else {
+            count = partition(options.rows, processes, rank).count * options.cols;
+        }
+        layout.counts.push_back(static_cast<int>(count));
+        layout.offsets.push_back(static_cast<int>(offset));
+        offset += count;
     }
     return layout;
 }
 
-double measure_kernel(Data& local) {
+Data make_local_data(Task task, const Options& options, Slice slice) {
+    if (task == Task::variant1v) {
+        return {task, 0, options.cols};
+    }
+    const auto trailing = task == Task::variant3d && slice.count != 0
+                              ? std::min<std::size_t>(3, options.rows - slice.begin - slice.count)
+                              : 0;
+    return {task, slice.count, options.cols, slice.begin, trailing};
+}
+
+void pack_chains(const Options& options, int rank, int processes, std::span<double> packed) {
+    std::size_t offset = 0;
+    const auto chains = chain_count(options.rows, options.cols);
+    for (std::size_t index = rank; index < chains; index += processes) {
+        const auto chain = chain_at(index, options.rows, options.cols);
+        compute_chain(chain, initial_value(chain.row, chain.col), packed.data() + offset, 1);
+        offset += chain.count;
+    }
+}
+
+void unpack_chains(const Options& options,
+                   const GatherLayout& layout,
+                   std::span<const double> packed,
+                   std::span<double> result) {
+    const auto processes = layout.counts.size();
+    const auto stride = options.cols + 3;
+    const auto chains = chain_count(options.rows, options.cols);
+    for (std::size_t rank = 0; rank < processes; ++rank) {
+        std::size_t offset = layout.offsets[rank];
+        for (std::size_t index = rank; index < chains; index += processes) {
+            const auto chain = chain_at(index, options.rows, options.cols);
+            const auto head = chain.row * options.cols + chain.col;
+            for (std::size_t i = 0; i < chain.count; ++i) {
+                result[head + i * stride] = packed[offset++];
+            }
+        }
+    }
+}
+
+double measure_kernel(const auto& compute) {
     MPI_Barrier(MPI_COMM_WORLD);
     const double start = MPI_Wtime();
-    fused(local);
+    compute();
     // Include the time until every rank completes its work.
     MPI_Barrier(MPI_COMM_WORLD);
     const double elapsed = MPI_Wtime() - start;
@@ -46,11 +96,9 @@ double measure_kernel(Data& local) {
     return maximum;
 }
 
-Validation gather_and_validate(std::span<const double> local,
-                               std::span<double> collected,
-                               std::span<const double> expected,
-                               const GatherLayout& layout,
-                               bool root) {
+void gather(std::span<const double> local,
+            std::span<double> collected,
+            const GatherLayout& layout) {
     MPI_Gatherv(local.data(),
                 static_cast<int>(local.size()),
                 MPI_DOUBLE,
@@ -60,25 +108,6 @@ Validation gather_and_validate(std::span<const double> local,
                 MPI_DOUBLE,
                 root_rank,
                 MPI_COMM_WORLD);
-
-    Validation validation;
-    if (root) {
-        validation = compare(collected, expected);
-    }
-    // All ranks must skip a failed configuration together.
-    MPI_Bcast(&validation.mismatches, 1, MPI_UINT64_T, root_rank, MPI_COMM_WORLD);
-    return validation;
-}
-
-Sample measure_mpi(Data& local,
-                   std::span<double> collected,
-                   std::span<const double> expected,
-                   const GatherLayout& layout,
-                   bool root) {
-    local.reset();
-    const double elapsed = measure_kernel(local);
-    const auto validation = gather_and_validate(local.output(), collected, expected, layout, root);
-    return {elapsed, collected, validation};
 }
 
 int execute(const Options& options, int rank, int processes) {
@@ -87,7 +116,6 @@ int execute(const Options& options, int rank, int processes) {
         throw std::invalid_argument("MPI_Gatherv count exceeds INT_MAX");
     }
     const auto slice = partition(options.rows, processes, rank);
-    const auto layout = gather_layout(options, processes);
     const bool root = rank == root_rank;
     auto csv = open_csv(options, root);
     auto* csv_output = csv.is_open() ? &csv : nullptr;
@@ -95,14 +123,39 @@ int execute(const Options& options, int rank, int processes) {
     std::size_t failed = 0;
 
     for (auto task : options.tasks) {
-        Data local(task, slice.count, options.cols, slice.begin);
+        const bool chains = task == Task::variant1v;
+        const auto layout = gather_layout(task, options, processes);
+        auto local = make_local_data(task, options, slice);
         Data expected(task, root ? options.rows : 0, options.cols);
+        std::vector<double> packed(chains ? layout.counts[rank] : 0);
         std::vector<double> collected(root ? elements : 0);
+        std::vector<double> unpacked(root && chains ? elements : 0);
         if (root) {
             sequential(expected);
         }
-        const auto measure = [&local, &collected, &expected, &layout, root] {
-            return measure_mpi(local, collected, expected.output(), layout, root);
+        const auto compute = [&] {
+            if (chains) {
+                pack_chains(options, rank, processes, packed);
+            } else {
+                fused(local);
+            }
+        };
+        const auto measure = [&] {
+            local.reset();
+            const auto elapsed = measure_kernel(compute);
+            gather(chains ? std::span<const double>(packed) : local.output(), collected, layout);
+            const auto result =
+                chains ? std::span<const double>(unpacked) : std::span<const double>(collected);
+            Validation validation;
+            if (root) {
+                if (chains) {
+                    unpack_chains(options, layout, collected, unpacked);
+                }
+                validation = compare(result, expected.output());
+            }
+            // All ranks must skip a failed configuration together.
+            MPI_Bcast(&validation.mismatches, 1, MPI_UINT64_T, root_rank, MPI_COMM_WORLD);
+            return Sample{elapsed, result, validation};
         };
         if (run_configuration(options, task, "mpi", processes, measure, csv_output, root)) {
             ++passed;

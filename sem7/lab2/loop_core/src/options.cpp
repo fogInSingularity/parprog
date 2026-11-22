@@ -31,12 +31,20 @@ std::vector<std::size_t> workers(std::string_view text) {
 }
 
 Backend parse_backend(std::string_view text) {
-    for (auto backend : {Backend::all, Backend::seq, Backend::fused, Backend::threads}) {
+    for (auto backend :
+         {Backend::all, Backend::seq, Backend::fused, Backend::threads, Backend::openmp}) {
         if (name(backend) == text) {
             return backend;
         }
     }
-    throw std::invalid_argument("Backend must be all, seq, fused, or threads");
+    throw std::invalid_argument("Backend must be all, seq, fused, threads, or openmp");
+}
+
+std::vector<Task> default_tasks(bool mpi) {
+    if (mpi) {
+        return {Task::reference, Task::variant1v, Task::variant3d};
+    }
+    return {all_tasks.begin(), all_tasks.end()};
 }
 } // namespace
 
@@ -50,12 +58,17 @@ std::string_view name(Backend backend) {
         return "fused";
     case Backend::threads:
         return "threads";
+    case Backend::openmp:
+        return "openmp";
     }
     throw std::invalid_argument("Unknown backend");
 }
 
 Options parse_options(int argc, char** argv, bool mpi) {
     Options options;
+    if (mpi) {
+        options.tasks = default_tasks(true);
+    }
     if (argc > 1) {
         options.command = argv[1];
     }
@@ -81,9 +94,14 @@ Options parse_options(int argc, char** argv, bool mpi) {
             options.cols = number(value);
         } else if (key == "--task") {
             if (value == "all") {
-                options.tasks = {Task::reference, Task::variant3v};
+                options.tasks = default_tasks(mpi);
             } else {
-                options.tasks = {parse_task(value)};
+                const auto task = parse_task(value);
+                if (mpi && task == Task::variant2g) {
+                    throw std::invalid_argument(
+                        "Task 2g uses OpenMP; run loop_lab --backend openmp");
+                }
+                options.tasks = {task};
             }
         } else if (key == "--workers" && !mpi) {
             options.workers = workers(value);
@@ -109,11 +127,11 @@ Options parse_options(int argc, char** argv, bool mpi) {
 
 void help(std::ostream& out, bool mpi) {
     out << (mpi ? "loop_mpi" : "loop_lab") << " check|bench [options]\n"
-        << "  --task reference|3v|all  default: all (3v is task 3в)\n"
+        << (mpi ? "  --task reference|1v|3d|all\n" : "  --task reference|1v|2g|3d|all\n")
         << "  --rows 1000 --cols 1000  positive independent dimensions; supports 5000x5000\n";
     if (!mpi) {
-        out << "  --backend all|seq|fused|threads\n"
-            << "  --workers 1,2,8,32       total C++ threads, including the caller\n";
+        out << "  --backend all|seq|fused|threads|openmp  (OpenMP is used for 2g)\n"
+            << "  --workers 1,2,8,32       total threads, including the caller\n";
     } else {
         out << "  MPI process count is set with mpirun -np N\n";
     }

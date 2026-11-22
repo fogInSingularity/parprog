@@ -26,17 +26,18 @@ class PlotTests(unittest.TestCase):
 
     def test_best_sequential_baseline(self):
         rows = [
-            ["3v", "seq", 7, 11, 1, 0, 10, 0],
-            ["3v", "fused", 7, 11, 1, 0, 5, 0],
-            ["3v", "threads", 7, 11, 2, 0, 2.5, 0],
-            ["3v", "mpi", 7, 11, 2, 0, 2, 0],
+            ["2g", "seq", 7, 11, 1, 0, 10, 0],
+            ["2g", "fused", 7, 11, 1, 0, 5, 0],
+            ["2g", "openmp", 7, 11, 2, 0, 2.5, 0],
+            ["1v", "seq", 7, 11, 1, 0, 5, 0],
+            ["1v", "mpi", 7, 11, 2, 0, 2, 0],
         ]
         results = self.analyze(rows)
-        threaded = results[PLOT.Key("3v", "threads", 7, 11, 2)]
-        self.assertEqual(threaded["baseline"], "fused")
-        self.assertEqual(threaded["speedup"], 2)
-        self.assertEqual(threaded["efficiency"], 1)
-        self.assertEqual(results[PLOT.Key("3v", "mpi", 7, 11, 2)]["speedup"], 2.5)
+        openmp = results[PLOT.Key("2g", "openmp", 7, 11, 2)]
+        self.assertEqual(openmp["baseline"], "fused")
+        self.assertEqual(openmp["speedup"], 2)
+        self.assertEqual(openmp["efficiency"], 1)
+        self.assertEqual(results[PLOT.Key("1v", "mpi", 7, 11, 2)]["speedup"], 2.5)
 
     def test_shapes_and_tasks_are_separate(self):
         with self.assertRaisesRegex(ValueError, "baseline"):

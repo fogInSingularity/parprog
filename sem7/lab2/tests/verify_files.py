@@ -30,16 +30,26 @@ def main():
             "--dump", str(output),
         ]
         subprocess.run([str(directory / "loop_lab"), *common, "--workers", "1,2,8"], check=True)
-        outputs = ["fused-p1", "threads-p1", "threads-p2", "threads-p8"]
+        outputs = {
+            "reference": ["fused-p1", "threads-p1", "threads-p2", "threads-p8"],
+            "1v": ["fused-p1"],
+            "2g": ["fused-p1", "openmp-p1", "openmp-p2", "openmp-p8"],
+            "3d": ["fused-p1"],
+        }
         if args.ranks is not None:
             launcher = mpi.launcher_path(directory)
             invocation = mpi.command(launcher, args.ranks, directory / "loop_mpi", common)
             subprocess.run(invocation, env=mpi.environment(launcher), check=True)
-            outputs.append(f"mpi-p{args.ranks}")
-        for task in ("reference", "3v"):
+            for task in ("reference", "1v", "3d"):
+                outputs[task].append(f"mpi-p{args.ranks}")
+        for task, backends in outputs.items():
             prefix = f"{task}-{args.rows}x{args.cols}-"
             reference = (output / f"{prefix}seq-p1.txt").read_bytes()
-            for backend in outputs:
+            height, width = (args.cols, args.rows) if task == "1v" else (args.rows, args.cols)
+            lines = reference.splitlines()
+            if len(lines) != height or any(len(line.split()) != width for line in lines):
+                raise ValueError(f"Unexpected result shape for {task}")
+            for backend in backends:
                 path = output / f"{prefix}{backend}.txt"
                 if path.read_bytes() != reference:
                     raise ValueError(f"File differs from sequential: {path.name}")

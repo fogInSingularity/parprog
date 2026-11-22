@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot speedup and efficiency versus workers for the reference and task 3v."""
+"""Plot timings, speedup, and efficiency for the loop lab."""
 
 import argparse
 import csv
@@ -9,8 +9,14 @@ from pathlib import Path
 import statistics
 
 
-TASK_LABELS = {"reference": "Эталон", "3v": "Вариант 3в"}
-BACKEND_STYLES = {"threads": ("Потоки", "-"), "mpi": ("MPI", "--")}
+TASK_LABELS = {
+    "reference": "Эталон",
+    "1v": "Вариант 1в",
+    "2g": "Вариант 2г",
+    "3d": "Вариант 3д",
+    "3v": "Вариант 3в",  # Archived measurements
+}
+BACKEND_STYLES = {"threads": ("Потоки", "-"), "mpi": ("MPI", "--"), "openmp": ("OpenMP", "-.")}
 SEQUENTIAL_BACKENDS = {"seq", "fused"}
 SCALING_METRICS = (
     ("speedup", "Ускорение S(p) = Tseq / Tp"),
@@ -120,6 +126,13 @@ def colors_by_key(plt, keys):
     return {key: palette[index % len(palette)] for index, key in enumerate(keys)}
 
 
+def worker_ticks(counts):
+    if len(counts) <= 8:
+        return counts
+    step = math.ceil(len(counts) / 8)
+    return [counts[0], *counts[step - 1 : -1 : step], counts[-1]]
+
+
 def draw_scaling(plt, series, tasks, shapes, counts):
     colors = colors_by_key(plt, shapes)
     legend_height = 0.3 * len(shapes) + 0.2
@@ -146,6 +159,7 @@ def draw_scaling(plt, series, tasks, shapes, counts):
                 workers,
                 [value[metric] for value in measurements],
                 marker="o",
+                markersize=3 if len(counts) > 8 else 6,
                 label=label,
                 color=colors[rows, cols],
                 linestyle=line_style,
@@ -153,13 +167,14 @@ def draw_scaling(plt, series, tasks, shapes, counts):
             legend.setdefault(label, line)
 
     for task, axes in task_axes.items():
-        for axis, (_, label) in zip(axes, SCALING_METRICS):
-            axis.set_xscale("log", base=2)
-            axis.set_xticks(counts, [str(count) for count in counts])
-            axis.set_xlabel("Число потоков / MPI-процессов")
-            axis.set_ylabel(label)
-            axis.set_title(TASK_LABELS[task])
+        for axis in axes:
+            if len(counts) <= 8:
+                axis.set_xscale("log", base=2)
+            axis.set_xticks(worker_ticks(counts))
+            axis.set_xlabel("Число исполнителей")
             axis.grid(alpha=0.25)
+        axes[0].set_ylabel(f"{TASK_LABELS[task]}\n{SCALING_METRICS[0][1]}")
+        axes[1].set_ylabel(SCALING_METRICS[1][1])
         axes[1].axhline(1, color="gray", linestyle=":", linewidth=1)
     legend_axis.legend(legend.values(), legend.keys(), loc="center", ncol=2)
     return fig
@@ -187,8 +202,9 @@ def time_points(results, task, square):
 def draw_times(plt, results, tasks, shapes, counts):
     colors = colors_by_key(plt, counts)
     square = all(rows == cols for rows, cols in shapes)
+    size_label = "Сторона квадратного массива N" if square else "Число элементов массива"
     ticks = sorted({size_on_axis(rows, cols, square) for rows, cols in shapes})
-    fig = plt.figure(figsize=(13, 6.5), layout="constrained")
+    fig = plt.figure(figsize=(max(13, 4.5 * len(tasks)), 6.5), layout="constrained")
     grid = fig.add_gridspec(2, len(tasks), height_ratios=(4.5, 2))
     axes = [fig.add_subplot(grid[0, column]) for column in range(len(tasks))]
     legend_axis = fig.add_subplot(grid[1, :])
@@ -215,14 +231,58 @@ def draw_times(plt, results, tasks, shapes, counts):
             *zip(*sorted(baseline.items())), color="black", marker="s", linewidth=2
         )
         legend.setdefault("Последовательная (лучшая)", line)
-        axis.set_title(TASK_LABELS[task])
         axis.set_xscale("log", base=2)
         axis.set_xticks(ticks, [str(value) for value in ticks])
         axis.set_yscale("log")
-        axis.set_xlabel("Сторона квадратного массива N" if square else "Число элементов массива")
+        axis.set_xlabel(f"{TASK_LABELS[task]} · {size_label}")
         axis.set_ylabel("Время, мс (логарифмическая шкала)")
         axis.grid(alpha=0.25, which="both")
     legend_axis.legend(legend.values(), legend.keys(), loc="center", ncol=3)
+    return fig
+
+
+def draw_time_heatmaps(plt, results, tasks, shapes, counts):
+    from matplotlib.colors import LogNorm
+
+    backends_by_task = {task: set() for task in tasks}
+    for key in results:
+        if key.backend in BACKEND_STYLES:
+            backends_by_task[key.task].add(key.backend)
+    columns = max(map(len, backends_by_task.values()))
+    fig = plt.figure(figsize=(13, 2.55 * len(tasks) + 1.4), layout="constrained")
+    panels = fig.add_gridspec(len(tasks), columns + 1, width_ratios=[1] * columns + [0.035])
+    times = [value["mean_seconds"] * 1000 for value in results.values()]
+    norm = LogNorm(vmin=min(times), vmax=max(times))
+    square = all(rows == cols for rows, cols in shapes)
+    sizes = [size_on_axis(rows, cols, square) for rows, cols in shapes]
+
+    for row, task in enumerate(tasks):
+        parallel, baseline = time_points(results, task, square)
+        series = {key: dict(points) for key, points in parallel.items()}
+        backends = [backend for backend in BACKEND_STYLES if backend in backends_by_task[task]]
+        for column, backend in enumerate(backends):
+            panel = panels[row, :-1] if len(backends) == 1 else panels[row, column]
+            axis = fig.add_subplot(panel)
+            timings = [baseline, *(series.get((backend, count), {}) for count in counts)]
+            grid = [[values.get(size, math.nan) for values in timings] for size in sizes]
+            image = axis.imshow(
+                grid,
+                aspect="auto",
+                origin="lower",
+                interpolation="nearest",
+                cmap="viridis_r",
+                norm=norm,
+            )
+            axis.axvline(0.5, color="white", linewidth=1)
+            axis.set_yticks(range(len(shapes)), [f"{rows}×{cols}" for rows, cols in shapes])
+            axis.set_xticks(range(len(counts) + 1), [r"$T_1$", *map(str, counts)], fontsize=8)
+            axis.set_xlabel(f"{BACKEND_STYLES[backend][0]} · число исполнителей")
+            if column == 0:
+                axis.set_ylabel(TASK_LABELS[task])
+            else:
+                axis.tick_params(labelleft=False)
+
+    fig.colorbar(image, cax=fig.add_subplot(panels[:, -1]), label="Время, мс")
     return fig
 
 
@@ -240,17 +300,25 @@ def render(results, directory, title):
     if not series:
         raise ValueError("No parallel measurements to plot")
 
-    tasks = sorted({task for task, _, _, _ in series}, reverse=True)
+    measured_tasks = {task for task, _, _, _ in series}
+    tasks = [task for task in TASK_LABELS if task in measured_tasks]
     shapes = sorted({(rows, cols) for _, _, rows, cols in series})
     counts = sorted({key.workers for key in results if key.backend in BACKEND_STYLES})
 
     scaling = draw_scaling(plt, series, tasks, shapes, counts)
-    scaling.suptitle(title)
+    if title:
+        scaling.suptitle(title)
     save_figure(scaling, directory, "scaling")
     plt.close(scaling)
 
-    times = draw_times(plt, results, tasks, shapes, counts)
-    times.suptitle(title + ": время от размера")
+    if len(counts) > 10:
+        times = draw_time_heatmaps(plt, results, tasks, shapes, counts)
+        times_title = "время по размерам и числу исполнителей"
+    else:
+        times = draw_times(plt, results, tasks, shapes, counts)
+        times_title = "время от размера"
+    if title:
+        times.suptitle(f"{title}: {times_title}")
     save_figure(times, directory, "time")
     plt.close(times)
 
@@ -259,7 +327,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("csv", type=Path)
     parser.add_argument("--output", type=Path, default=Path("plots"))
-    parser.add_argument("--title", default="Лабораторная 2: эталон и вариант 3в")
+    parser.add_argument("--title")
     args = parser.parse_args()
     results = summarize(args.csv)
     args.output.mkdir(parents=True, exist_ok=True)

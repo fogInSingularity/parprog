@@ -46,33 +46,45 @@ void partitions() {
 
 void products() {
     for (auto workers : {1U, 2U, 8U, 32U}) {
-        for (auto task : {Task::reference, Task::variant3v}) {
-            for (auto rows : {0U, 1U, 2U, 7U, 17U}) {
-                for (auto cols : {1U, 2U, 3U, 11U, 19U}) {
+        for (auto task : all_tasks) {
+            for (auto rows : {0U, 1U, 2U, 3U, 4U, 7U, 17U}) {
+                for (auto cols : {1U, 2U, 3U, 5U, 6U, 11U, 19U}) {
                     Data expected(task, rows, cols, 13);
                     Data actual(task, rows, cols, 13);
                     sequential(expected);
                     fused(actual);
-                    require(compare(actual.a, expected.a).passed(), "Fused A differs");
-                    require(compare(actual.b, expected.b).passed(), "Fused B differs");
-                    for (int repeat = 0; repeat < 3; ++repeat) {
-                        actual.reset();
+                    require(compare(actual.output(), expected.output()).passed(),
+                            "Fused result differs");
+                    actual.reset();
+                    if (task == Task::variant2g) {
+                        openmp(actual, workers);
+                    } else {
                         threaded(actual, workers);
-                        require(compare(actual.a, expected.a).passed(), "Threaded A differs");
-                        require(compare(actual.b, expected.b).passed(), "Threaded B differs");
                     }
+                    require(compare(actual.output(), expected.output()).passed(),
+                            "Parallel result differs");
                 }
             }
         }
     }
-    Data data(Task::variant3v, 2, 4);
-    sequential(data);
-    require(data.b[0] == 0 && data.b[1] == 0 && data.b[4] == 0 && data.b[5] == 0,
-            "The first two columns of B must stay zero");
-    require(data.b[6] == std::sin(0.01 * 10.0) * 2.5, "Wrong variant 3v formula");
+    Data recurrence(Task::variant1v, 3, 9);
+    sequential(recurrence);
+    require(recurrence.a[6] == 6 && recurrence.a[2 * 9 + 2] == 22, "Wrong 1v boundaries");
+    require(recurrence.a[2 * 9 + 7] == std::sin(2.0 * std::sin(2.0)), "Wrong 1v recurrence");
+
+    Data snapshot(Task::variant2g, 8, 8);
+    sequential(snapshot);
+    require(snapshot.a[4] == std::sin(0.1 * 32.0), "2g must use the original source value");
+    require(snapshot.a[1] == 1 && snapshot.a[7 * 8 + 7] == 77, "Wrong 2g boundaries");
+
+    Data shifted(Task::variant3d, 7, 7);
+    sequential(shifted);
+    require(shifted.b[4] == 0 && shifted.b[4 * 7 + 6] == 0, "Wrong 3d boundaries");
+    require(shifted.b[2 * 7 + 6] == std::sin(0.001 * 51.0) * 3.0, "Wrong 3d shift");
+
     invalid([] { Data data(Task::reference, 1, 0); });
     invalid([] { checked_elements(std::numeric_limits<std::size_t>::max(), 2); });
-    invalid([&] { threaded(data, 0); });
+    invalid([&] { threaded(recurrence, 0); });
 }
 
 void validation() {
@@ -106,10 +118,10 @@ void failure_is_reported() {
         return Sample{0.01, {}, result};
     };
     std::ostringstream csv;
-    require(!run_configuration(options, Task::variant3v, "test", 1, run, &csv, false),
+    require(!run_configuration(options, Task::variant3d, "test", 1, run, &csv, false),
             "Failure ignored");
     require(csv.str().empty(), "Partial invalid measurement group was saved");
-    require(run_configuration(options, Task::variant3v, "test", 1, run, &csv, false),
+    require(run_configuration(options, Task::variant3d, "test", 1, run, &csv, false),
             "Later group did not run");
     require(!csv.str().empty(), "Valid measurements lost");
 }

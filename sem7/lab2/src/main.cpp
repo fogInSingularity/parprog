@@ -25,6 +25,9 @@ Sample measure_local(Backend backend, std::size_t workers, Data& data, const Dat
     case Backend::threads:
         threaded(data, workers);
         break;
+    case Backend::openmp:
+        openmp(data, workers);
+        break;
     case Backend::all:
         throw std::logic_error("Select one backend before running a measurement");
     }
@@ -45,12 +48,17 @@ int execute(const Options& options) {
         sequential(expected);
         Data data(task, options.rows, options.cols);
 
-        for (auto backend : {Backend::seq, Backend::fused, Backend::threads}) {
+        for (auto backend : {Backend::seq, Backend::fused, Backend::threads, Backend::openmp}) {
             if (options.backend != Backend::all && options.backend != backend) {
                 continue;
             }
+            if ((backend == Backend::openmp && task != Task::variant2g) ||
+                (backend == Backend::threads && options.backend == Backend::all &&
+                 task != Task::reference)) {
+                continue;
+            }
             std::span<const std::size_t> counts = serial_counts;
-            if (backend == Backend::threads) {
+            if (backend == Backend::threads || backend == Backend::openmp) {
                 counts = options.workers;
             }
             for (auto workers : counts) {
@@ -66,6 +74,9 @@ int execute(const Options& options) {
         }
     }
 
+    if (passed + failed == 0) {
+        throw std::invalid_argument("No tasks support the selected backend");
+    }
     std::cout << "Completed: " << passed << " passed, " << failed << " failed.\n";
     return failed == 0 ? 0 : 1;
 }

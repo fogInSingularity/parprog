@@ -15,8 +15,12 @@ std::string_view name(Task task) {
     switch (task) {
     case Task::reference:
         return "reference";
-    case Task::variant3v:
-        return "3v";
+    case Task::variant1v:
+        return "1v";
+    case Task::variant2g:
+        return "2g";
+    case Task::variant3d:
+        return "3d";
     }
     throw std::invalid_argument("Unknown task");
 }
@@ -25,10 +29,16 @@ Task parse_task(std::string_view text) {
     if (text == "reference") {
         return Task::reference;
     }
-    if (text == "3v" || text == "3в") {
-        return Task::variant3v;
+    if (text == "1v" || text == "1в") {
+        return Task::variant1v;
     }
-    throw std::invalid_argument("Task must be reference, 3v, or all");
+    if (text == "2g" || text == "2г") {
+        return Task::variant2g;
+    }
+    if (text == "3d" || text == "3д") {
+        return Task::variant3d;
+    }
+    throw std::invalid_argument("Task must be reference, 1v, 2g, 3d, or all");
 }
 
 std::size_t checked_elements(std::size_t rows, std::size_t cols) {
@@ -37,6 +47,10 @@ std::size_t checked_elements(std::size_t rows, std::size_t cols) {
             "Array dimensions must fit in address space; columns must be positive");
     }
     return rows * cols;
+}
+
+double initial_value(std::size_t row, std::size_t col) noexcept {
+    return 10.0 * static_cast<double>(row) + static_cast<double>(col);
 }
 
 Slice partition(std::size_t rows, std::size_t workers, std::size_t rank) {
@@ -48,26 +62,39 @@ Slice partition(std::size_t rows, std::size_t workers, std::size_t rank) {
     return {base * rank + std::min(rank, remainder), base + (rank < remainder ? 1 : 0)};
 }
 
-Data::Data(Task selected, std::size_t height, std::size_t width, std::size_t offset)
-    : task(selected), rows(height), cols(width), row_offset(offset),
-      a(checked_elements(height, width)), b(selected == Task::variant3v ? a.size() : 0) {
-    if (offset > std::numeric_limits<std::size_t>::max() - height) {
+Data::Data(Task selected,
+           std::size_t height,
+           std::size_t width,
+           std::size_t offset,
+           std::size_t trailing_rows)
+    : task(selected), rows(height), cols(width), row_offset(offset) {
+    if (offset > std::numeric_limits<std::size_t>::max() - height ||
+        trailing_rows > std::numeric_limits<std::size_t>::max() - offset - height) {
         throw std::invalid_argument("Global row offset overflows size_t");
+    }
+    a.resize(checked_elements(rows + trailing_rows, cols));
+    if (task == Task::variant2g || task == Task::variant3d) {
+        b.resize(checked_elements(rows, cols));
     }
     reset();
 }
 
 void Data::reset() {
-    for (std::size_t i = 0; i < rows; ++i) {
+    for (std::size_t i = 0; i < a.size() / cols; ++i) {
         for (std::size_t j = 0; j < cols; ++j) {
-            a[i * cols + j] = 10.0 * static_cast<double>(row_offset + i) + static_cast<double>(j);
+            a[i * cols + j] = initial_value(row_offset + i, j);
         }
     }
-    std::fill(b.begin(), b.end(), 0.0);
+    if (task == Task::variant2g) {
+        std::copy_n(a.begin(), b.size(), b.begin());
+    } else {
+        std::fill(b.begin(), b.end(), 0.0);
+    }
 }
 
 std::span<const double> Data::output() const {
-    return task == Task::reference ? std::span<const double>(a) : std::span<const double>(b);
+    return task == Task::variant3d ? std::span<const double>(b)
+                                   : std::span<const double>(a).first(rows * cols);
 }
 
 Validation compare(std::span<const double> actual, std::span<const double> expected) {
@@ -105,7 +132,8 @@ double checksum(std::span<const double> values) {
 void write_matrix(const std::filesystem::path& path,
                   std::span<const double> values,
                   std::size_t rows,
-                  std::size_t cols) {
+                  std::size_t cols,
+                  Task task) {
     if (values.size() != checked_elements(rows, cols)) {
         throw std::invalid_argument("Output size mismatch");
     }
@@ -118,9 +146,12 @@ void write_matrix(const std::filesystem::path& path,
     }
     output.imbue(std::locale::classic());
     output << std::setprecision(std::numeric_limits<double>::max_digits10);
-    for (std::size_t i = 0; i < rows; ++i) {
-        for (std::size_t j = 0; j < cols; ++j) {
-            output << values[i * cols + j] << ' ';
+    const bool columns_first = task == Task::variant1v;
+    const auto outer = columns_first ? cols : rows;
+    const auto inner = columns_first ? rows : cols;
+    for (std::size_t i = 0; i < outer; ++i) {
+        for (std::size_t j = 0; j < inner; ++j) {
+            output << values[columns_first ? j * cols + i : i * cols + j] << ' ';
         }
         output << '\n';
     }
