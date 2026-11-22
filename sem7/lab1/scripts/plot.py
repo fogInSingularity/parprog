@@ -141,7 +141,8 @@ def render(results, destination, title):
     axis.set_xticks(sizes, [str(n) for n in sizes])
     axis.set_xlabel("Размер матрицы N × N")
     axis.set_ylabel("Среднее время, с")
-    axis.set_title(title)
+    if title:
+        axis.set_title(title)
     axis.grid(True, which="both", alpha=0.25)
     axis.legend(fontsize="small", ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.12))
     for extension in ("png", "pdf"):
@@ -165,7 +166,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("csv", type=Path)
     parser.add_argument("--output", type=Path, default=Path("plots"))
-    parser.add_argument("--title", default="Matrix multiplication, float32")
+    parser.add_argument("--title")
     parser.add_argument(
         "--threads",
         type=thread_counts,

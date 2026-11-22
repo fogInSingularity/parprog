@@ -44,6 +44,6 @@ mv -- "$matrix_csv.meta.txt" "$matrix_results/raw.csv.meta.txt"
 printf 'Measurements saved to %s\n' "$matrix_results/raw.csv"
 
 python3 "$(dirname "$0")/plot.py" "$matrix_results/raw.csv" \
-    --output "$matrix_results/plots" --title "Server: matrix multiplication, float32"
+    --output "$matrix_results/plots"
 
 exit "$matrix_benchmark_status"

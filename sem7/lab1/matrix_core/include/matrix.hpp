@@ -78,7 +78,6 @@ struct Error {
     double allowed = 0;
 };
 
-// Absolute tolerance handles cancellation near zero; relative tolerance handles scale.
 Error compare(const Matrix& actual,
               const std::vector<double>& expected,
               double absolute_tolerance = 2e-4,
