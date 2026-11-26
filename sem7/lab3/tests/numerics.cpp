@@ -44,6 +44,34 @@ void check_tridiagonal() {
     }
 }
 
+void check_zero_reaction() {
+    constexpr double left = 1.25;
+    constexpr double right = 2.5;
+    CyclicReduction reduction;
+    for (bool full : {false, true}) {
+        const Grid grid{0.0, 31, full};
+        NewtonState state(grid, {0, grid.unknowns()});
+        auto values = state.with_halos();
+        values.front() = left;
+        values.back() = right;
+        for (std::size_t i = 0; i < grid.unknowns(); ++i) {
+            values[i + 1] = 1.0 + 0.1 * static_cast<double>(i % 5);
+        }
+        newton(
+            state,
+            [](std::span<double>) {},
+            [&reduction](std::span<Row> rows, std::span<double> correction) {
+                reduction.solve(rows, correction);
+            },
+            [](std::array<double, 2> norms) { return norms; });
+        for (std::size_t i = 0; i < grid.unknowns(); ++i) {
+            const auto x = grid.coordinate(i);
+            const auto exact = full ? left + (right - left) * (x + 10.0) / 20.0 : right;
+            require(std::abs(state.values()[i] - exact) < 1e-12, "Wrong solution for y'' = 0");
+        }
+    }
+}
+
 std::vector<double> solve(std::size_t intervals) {
     Grid grid{100.0, intervals, false};
     NewtonState state(grid, {0, grid.unknowns()});
@@ -78,8 +106,10 @@ void check_accuracy() {
 int main() {
     try {
         check_tridiagonal();
+        check_zero_reaction();
         check_accuracy();
-        std::cout << "Tridiagonal solutions and fourth-order grid convergence passed.\n";
+        std::cout
+            << "Tridiagonal, exact boundary-value, and fourth-order convergence tests passed.\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;
